@@ -7,9 +7,10 @@ from dotenv import load_dotenv  # Добавьте эту строку в имп
 
 # Загрузка переменных окружения из .env файла
 
-
 # Получение токена из переменных окружения
-TELEGRAM_BOT_TOKEN = '7801880044:AAHU2ZX9ah1C5gXN3cKmOOcpL8w1ogTW3so' 
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') 
+if not TELEGRAM_BOT_TOKEN:
+    raise ValueError("Токен бота не найден в .env файле!")
   
 abc = '💴💵💶💷💸💳'
 
