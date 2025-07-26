@@ -2,11 +2,18 @@ import telebot as t
 import sqlite3 as sql
 from datetime import datetime
 import random as r
+import os
+from dotenv import load_dotenv  # Добавьте эту строку в импорты
 
-TOKEN = '7801880044:AAHU2ZX9ah1C5gXN3cKmOOcpL8w1ogTW3so'
+# Загрузка переменных окружения из .env файла
+
+
+# Получение токена из переменных окружения
+TELEGRAM_BOT_TOKEN = '7801880044:AAHU2ZX9ah1C5gXN3cKmOOcpL8w1ogTW3so' 
+  
 abc = '💴💵💶💷💸💳'
 
-bot = t.TeleBot(TOKEN)
+bot = t.TeleBot(TELEGRAM_BOT_TOKEN)
 
 # Подключение к базе данных
 conn = sql.connect('finance.db', check_same_thread=False)
@@ -123,11 +130,30 @@ def monthly_report(message):
 
     if not results:
         bot.reply_to(message, 'За этот месяц нет записей 😶‍🌫️')
+        return
 
     report = f'Отчёт за {current_month}: \n'
+    total_income = 0
+    total_expense = 0
+    
     for row in results:
         transaction_type, total, category = row
         report += f'{transaction_type.capitalize()}: {total} ({category})\n'
+        
+        if transaction_type == 'income':
+            total_income += total
+        elif transaction_type == 'expense':
+            total_expense += total
+    
+    balance = total_income - total_expense
+    report += f'\nИтого:\nДоходы: {total_income}\nРасходы: {total_expense}\n'
+    
+    if balance > 0:
+        report += f'Общий результат: +{balance}р (прибыль)'
+    elif balance < 0:
+        report += f'Общий результат: {balance}р (расход)'
+    else:
+        report += 'Общий результат: 0₽ (сбалансировано)'
 
     bot.reply_to(message, report)
 
@@ -145,9 +171,27 @@ def total_report(message):
         return
 
     report = "Общий отчёт:\n"
+    total_income = 0
+    total_expense = 0
+    
     for row in results:
         transaction_type, total = row
         report += f"{transaction_type.capitalize()}: {total}\n"
+        
+        if transaction_type == 'income':
+            total_income += total
+        elif transaction_type == 'expense':
+            total_expense += total
+    
+    balance = total_income - total_expense
+    report += f'\nИтого:\nДоходы: {total_income}\nРасходы: {total_expense}\n'
+    
+    if balance > 0:
+        report += f'Общий результат: +{balance}₽ (прибыль)'
+    elif balance < 0:
+        report += f'Общий результат: {balance}₽ (расход)'
+    else:
+        report += 'Общий результат: 0₽ (сбалансировано)'
 
     bot.reply_to(message, report)
 
