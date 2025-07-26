@@ -39,8 +39,9 @@ python-dotenv - для управления конфигурацией
 ⚙️ Установка
 Клонируйте репозиторий:
 
-git clone https://github.com/jorjlionov/Expenses_calculator.git
-cd finance-tracker-bot
+<code>git clone https://github.com/jorjlionov/Expenses_calculator.git
+cd Expenses_calculator
+<\code>
 Установите зависимости:
 
 pip install -r requirements.txt
