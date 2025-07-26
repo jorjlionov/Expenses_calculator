@@ -3,15 +3,12 @@ import sqlite3 as sql
 from datetime import datetime
 import random as r
 import os
-from dotenv import load_dotenv  # Добавьте эту строку в импорты
+from dotenv import load_dotenv
 
-# Загрузка переменных окружения из .env файла
+load_dotenv()
 
-# Получение токена из переменных окружения
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') 
-if not TELEGRAM_BOT_TOKEN:
-    raise ValueError("Токен бота не найден в .env файле!")
-  
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') or '7801880044:AAEXNKInMFvEosUPhtU3klUb9h_fJw_RA2w'
+
 abc = '💴💵💶💷💸💳'
 
 bot = t.TeleBot(TELEGRAM_BOT_TOKEN)
@@ -20,17 +17,6 @@ bot = t.TeleBot(TELEGRAM_BOT_TOKEN)
 conn = sql.connect('finance.db', check_same_thread=False)
 cursor = conn.cursor()
 
-# Создание таблицы транзакций
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT,
-    amount REAL,
-    category TEXT,
-    date TEXT
-)
-''')
-
 # Создание таблицы пользователей
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS users (
@@ -38,26 +24,49 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT
 )
 ''')
+
+# Создание таблицы транзакций
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    type TEXT,
+    amount REAL,
+    category TEXT,
+    date TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+)
+''')
+
+# Миграция: добавляем столбец user_id, если его нет
+try:
+    cursor.execute("SELECT user_id FROM transactions LIMIT 1")
+except sql.OperationalError:
+    # Если столбца user_id нет, добавляем его
+    cursor.execute('ALTER TABLE transactions ADD COLUMN user_id INTEGER')
 conn.commit()
 
-# Функция для получения случайного эмодзи
 def get_random_emoji():
     return abc[r.randint(0, 5)]
 
-# Приветственное сообщение
 @bot.message_handler(commands=['start'])
 def welcome_send(message):
+    user_id = message.from_user.id
+    username = message.from_user.username or message.from_user.first_name
+
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)', (user_id, username))
+    conn.commit()
+
     bot.reply_to(
         message,
         "Привет! Я бот для учёта доходов и расходов. \n\n"
         "Доступные команды:\n"
         "/add_salary — добавить доход\n"
         "/add_expense — добавить расход\n"
-        "/monthly_report — отчёт за месяц\n"
+        "/month_report — отчёт за месяц\n"
         "/total_report — общий отчёт"
     )
 
-# Добавление дохода
 @bot.message_handler(commands=['add_salary'])
 def add_salary(message):
     bot.send_message(message.chat.id, 'Отправьте свой доход, например: 50000 зарплата')
@@ -65,30 +74,25 @@ def add_salary(message):
 
 def process_salary(message):
     try:
+        user_id = message.from_user.id
         amount, category = message.text.split(maxsplit=1)
         amount = float(amount)
         date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         emoji = get_random_emoji()
 
         cursor.execute('''
-        INSERT INTO transactions (type, amount, category, date)
-        VALUES (?, ?, ?, ?)
-        ''', ('income', amount, category, date))
+        INSERT INTO transactions (user_id, type, amount, category, date)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, 'income', amount, category, date))
         conn.commit()
 
         bot.reply_to(message, f'Доход {amount}{emoji} ({category}) успешно добавлен!')
-        #доп. проверка
     except ValueError:
-        if message.text == '/add_expense':
-            add_expense(message)
-        elif message.text == '/month_report':
-            monthly_report(message)
-        elif message.text == '/total_report':
-            total_report(message)
-        else:        
-            bot.reply_to(message, 'Неверно оформлена форма суммы и категории. Пожалуйста, введите сумму и категорию через пробел.')
+        if message.text.startswith('/'):
+            bot.reply_to(message, 'Пожалуйста, сначала введите сумму и категорию.')
+        else:
+            bot.reply_to(message, 'Неверный формат. Введите сумму и категорию через пробел.')
 
-# Добавление расхода
 @bot.message_handler(commands=['add_expense'])
 def add_expense(message):
     bot.send_message(message.chat.id, 'Введите сумму расхода и категорию, например: 100 еда')
@@ -96,37 +100,35 @@ def add_expense(message):
 
 def process_expenses(message):
     try:
+        user_id = message.from_user.id
         amount, category = message.text.split(maxsplit=1)
         amount = float(amount)
         date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         emoji = get_random_emoji()
 
         cursor.execute('''
-        INSERT INTO transactions (type, amount, category, date)
-        VALUES (?, ?, ?, ?)
-        ''', ('expense', amount, category, date))
+        INSERT INTO transactions (user_id, type, amount, category, date)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, 'expense', amount, category, date))
         conn.commit()
 
         bot.reply_to(message, f'Расход {amount}{emoji} ({category}) успешно добавлен!')
     except ValueError:
-        if message.text == '/add_salary':
-            add_expense(message)
-        elif message.text == '/month_report':
-            monthly_report(message)
-        elif message.text == '/total_report':
-            total_report(message)
-        else:        
-            bot.reply_to(message, 'Неверно оформлена форма суммы и категории. Пожалуйста, введите сумму и категорию через пробел.')
-        
-# Отчёт за месяц
+        if message.text.startswith('/'):
+            bot.reply_to(message, 'Пожалуйста, сначала введите сумму и категорию.')
+        else:
+            bot.reply_to(message, 'Неверный формат. Введите сумму и категорию через пробел.')
+
 @bot.message_handler(commands=['month_report'])
 def monthly_report(message):
+    user_id = message.from_user.id
     current_month = datetime.now().strftime('%Y-%m')
+
     cursor.execute('''
     SELECT type, SUM(amount), category FROM transactions
-    WHERE strftime('%Y-%m', date) = ?
+    WHERE user_id = ? AND strftime('%Y-%m', date) = ?
     GROUP BY type, category
-    ''', (current_month,))
+    ''', (user_id, current_month))
     results = cursor.fetchall()
 
     if not results:
@@ -158,13 +160,15 @@ def monthly_report(message):
 
     bot.reply_to(message, report)
 
-# Общий отчёт
 @bot.message_handler(commands=['total_report'])
 def total_report(message):
+    user_id = message.from_user.id
+
     cursor.execute('''
     SELECT type, SUM(amount) FROM transactions
+    WHERE user_id = ?
     GROUP BY type
-    ''')
+    ''', (user_id,))
     results = cursor.fetchall()
 
     if not results:
@@ -196,6 +200,5 @@ def total_report(message):
 
     bot.reply_to(message, report)
 
-# Запуск бота
 if __name__ == "__main__":
     bot.polling(none_stop=True)
