@@ -1,12 +1,12 @@
-📊 Finance Tracker Bot - Telegram Бот для учёта доходов и расходов
+📊 Expenses_calculator - Telegram Бот для учёта доходов и расходов
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jorjlionov/Finance _tracker_Bot/main/assets/logo.png" alt="Лого" width="200"/>
+  <img src="https://raw.githubusercontent.com/jorjlionov/Expenses_calculator/main/images/logo.png" alt="Лого" width="200"/>
 </p>
 
 
 📝 Описание
-Finance Tracker Bot - это удобный Telegram-бот для контроля личных финансов. Он помогает:
+Expenses_calculator - это удобный Telegram-бот для контроля личных финансов. Он помогает:
 
 📈 Учитывать доходы и расходы
 
@@ -39,7 +39,7 @@ python-dotenv - для управления конфигурацией
 ⚙️ Установка
 Клонируйте репозиторий:
 
-git clone https://github.com/ваш-username/finance-tracker-bot.git
+git clone https://github.com/jorjlionov/Expenses_calculator.git
 cd finance-tracker-bot
 Установите зависимости:
 
